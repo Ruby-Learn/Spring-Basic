@@ -8,7 +8,7 @@
 @Component
 public class OrderServiceImpl implements OrderService{
 
-    // final 로 인하여 다른 객체로 변경되지 않음을 보장
+    // final 로 인하여 다른 객체로 변경되지 않음을 보장. 또한 생성자를 통해 필드를 반드시 초기화해야함으로 의존관계 누락을 막아준다.
     private final MemberRepository memberRepository;
     private final DiscountPolicy discountPolicy;
 
