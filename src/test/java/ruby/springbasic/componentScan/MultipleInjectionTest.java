@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class MultipleInjectionTest {
 
     @Test
+    @DisplayName("List 필드에 의존성 주입")
     void testListInjection() {
         AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext(AppConfig.class);
 
@@ -30,7 +31,7 @@ public class MultipleInjectionTest {
     }
 
     @Test
-    @DisplayName("TestName")
+    @DisplayName("Map 필드에 의존성 주입")
     void testMapInjection() {
         AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext(AppConfig.class);
 
