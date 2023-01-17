@@ -65,3 +65,62 @@ public class OrderServiceImpl implements OrderService{
     }
 }
 ```
+
+### List / Map 을 통한 의존성 주입
+- List, Map 을 활용하면 특정 타입에 해당하는 여러 빈을 주입받을 수 있다.
+```java
+public enum TestPolicyType {
+    TEST1, TEST2
+}
+
+public interface TestPolicy {
+  // 구현할 정책이 여러개일 경우 정책을 구분하기 위한 메서드
+  boolean isPolicyType(TestPolicyType testPolicyType);
+}
+
+@Component
+public class TestPolicyImpl1 implements TestPolicy{
+
+  private static final TestPolicyType POLICY_TYPE = TestPolicyType.TEST1;
+
+  @Override
+  public boolean isPolicyType(TestPolicyType testPolicyType) {
+    return testPolicyType.equals(POLICY_TYPE);
+  }
+}
+
+@Component
+public class TestPolicyImpl2 implements TestPolicy{
+  private static final TestPolicyType POLICY_TYPE = TestPolicyType.TEST2;
+
+  @Override
+  public boolean isPolicyType(TestPolicyType testPolicyType) {
+    return testPolicyType.equals(POLICY_TYPE);
+  }
+}
+
+/**
+ * List, Map 을 활용하면 외부로부터 사용할 빈을 구분하기 위한 값을 통해 선택하여 사용할 수 있다.
+ * - 특정 비즈니스를 처리할 때 정책을 분기처리 해야할 때 유용하다.
+ */
+@Service
+@RequiredArgsConstructor
+public class MultipleService {
+
+  private final List<TestPolicy> testPolicies;
+
+  // Map 으로 의존성 주입을 받을 경우 기본 키 값은 빈의 타입명이 된다.(빈 이름의 첫문자는 소문자)
+  private final Map<String, TestPolicy> policyMap;
+
+  public TestPolicy getTestPolicyByList(TestPolicyType testPolicyType) {
+    return testPolicies.stream()
+            .filter(testPolicy -> testPolicy.isPolicyType(testPolicyType))
+            .findFirst()
+            .orElse(null);
+  }
+
+  public TestPolicy getTestPolicyByMap(String policyKey) {
+    return policyMap.get(policyKey);
+  }
+}
+```
