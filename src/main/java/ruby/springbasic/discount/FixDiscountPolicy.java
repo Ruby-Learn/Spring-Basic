@@ -3,6 +3,7 @@ package ruby.springbasic.discount;
 import ruby.springbasic.member.Grade;
 import ruby.springbasic.member.Member;
 
+//@Component
 public class FixDiscountPolicy implements DiscountPolicy{
 
     public static final int discountFixAmount = 1000;
