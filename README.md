@@ -1,120 +1,71 @@
-## 스프링 빈의 이벤트 라이프사이클
-- 스프링 빈 컨테이너 생성 -> 스프링 빈 생성 -> 의존관계 주입 -> 초기화 콜백 -> 빈 사용 -> 소멸 전 콜백 -> 스프링 종료
+## Bean Scope
+- 빈 객체가 존재할 수 있는 범위
 
-### 초기화 콜백
-- 빈 객체가 생성되고, 빈의 의존관계 주입이 완료된 후 호출
-- 생성자에서도 초기화 작업을 할 수 있지만 책임의 분리라는 측면에서 객체의 생성과 초기화를 각각 분리하는 것 유지보수 측면에서 더 좋다.
+### Bean Scope 의 종류
+- 싱글톤
+  - 기본 스코프. 스프링 컨테이너의 시작과 종료까지 유지되는 가장 넓은 범위의 스코프
+    - 빈 객체가 스프링 컨테이너 생성 시점에 같이 생성되고 컨테이너 종료시에 소멸
+  - 빈 객체를 요청시에 스프링 컨테이너는 모든 요청에 같은 객체를 반환  
+  ![img.png](img/singleton.png)  
+- 프로토타입
+  - 스프링 컨테이너가 빈의 생성과 의존관계 주입까지만 관여하고 더는 관리하지 않는 짧은 범위의 스코프
+  - 빈 객체를 요청시에 스프링 컨테이너는 요청때마다 해당 타입의 빈 객체를 새로 생성하여 반환
+  - 실무에서는 자주 사용되지는 않는다. 싱글톤이 아니므로 요청 때마다 객체가 생성되는 성질이 메모리 소모에 부담을 줄 수 있으므로 되도록
+  프로토타입을 사용하지 않는 방향으로 설계해야 한다.
+  - 생성 후 스프링 컨테이너가 관리하지 않으므로 이후 빈 객체의 @PreDestroy 같은 종료 메서드는 
+    해당 객체를 사용하는 클라이언트 쪽에서 호출 해줘야 한다.  
+  ![img_1.png](img/prototype.png)  
 
-### 소멸 전 콜백
-- 빈 객체가 소멸되기 직전에 호출
-
-### 초기화 / 소멸 메서드 지정
-- 초기화 / 소멸 메서드에 @PostConstruct / @PreDestroy 애너테이션 사용
-  - 간단하게 초기화 / 소멸 메서드를 지정할 수 있지만 외부 라이브러리에는 사용할 수 없다.
-    - 외부 라이브러리의 초기화 / 소멸 메서드 지정은 @Bean 의 initMethod / destroyMethod 속성을 통해 지정한다.
+### Bean Scope 지정
 ```java
-public class NetworkClient {
+@Scope("prototype")
+@Component
+public class MemberService {}
 
-    private final static Logger logger = LoggerFactory.getLogger(NetworkClient.class);
 
-    private String url;
-
-    public NetworkClient() {
-        logger.info("NetworkClient Constructor");
-    }
-
-    /** PostConstruct - 빈 객체가 생성되고, 빈의 의존관계 주입이 완료된 후 호출 */
-    @PostConstruct
-    public void init() {
-        logger.info("NetworkClient Init");
-        connect();
-        call("초기화 연결 메시지");
-    }
-
-    /** PreDestroy - 빈 객체가 소멸되기 직전에 호출 */
-    @PreDestroy
-    public void close() {
-        logger.info("NetworkClient close");
-        disconnect();
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public void connect() {
-        logger.info("connect: " + url);
-    }
-
-    public void call(String message) {
-        logger.info("call: {} / message: {}", url, message);
-    }
-
-    public void disconnect() {
-        logger.info("close: {}", url);
-    }
+public class Config {
+    
+  @Scope("prototype")
+  @Bean
+  public MemberService memberService() {}
+  
 }
 
-@Configuration
-class LifeCycleConfig {
-    @Bean
-    public NetworkClient networkClient() {
-        NetworkClient networkClient = new NetworkClient();
-        networkClient.setUrl("https://ruby.com");
-        return networkClient;
-    }
+@Component
+@RequiredArgsConstructor
+public class OrderService1 {
+    private final MemberService memberService;
+}
+
+@Component
+@RequiredArgsConstructor
+public class OrderService2 {
+  // OrderService1 내부의 memberService 객체와는 다른 객체가 새로 생성되어 주입된다.
+  private final MemberService memberService;
+} 
+```
+
+<br/>
+
+## Web Scope
+- 웹 환경에서만 동작하는 범위
+- 빈 스코프의 프로토타입과는 다르게 스프링이 스코프의 종료시점까지 관리함
+
+### Web Scope 의 종류
+- Request
+  - 웹 요청이 들어오고 나갈 때까지 유지되는 스코프
+  - 각각의 HTTP 요청마다 별도의 빈 객체가 생성되고 관리됨  
+  ![img_2.png](img/request.png)  
+- Session
+  - 웹 세션이 생성되고 종료될 때까지 유지되는 스코프
+- Application
+  - 웹의 서블릿 컨텍스트와 같은 범위로 유지되는 스코프
+```java
+
+@Scope("request")
+@Component
+public class MemberRequest {
+  // 스프링 컨테이너 생성시 해당 타입의 빈은 생성되지 않으므로 다른 빈에서 해당 타입의 객체를 주입받으려 할 때 오류가 발생한다.
 }
 ```
 
-- @Bean 의 initMethod, destroyMethod 속성 지정
-  - @PostConstruct / @PreDestroy 와는 달리 외부 라이브러리 내부의 메서드를 초기화 / 소멸 메서드로 지정할 수 있다는 장점이 있다.
-    - 외부 라이브러리의 초기화 / 소멸 시 동작이 필요한 메서드가 있을 때 해당 방법이 유용하다.
-```java
-public class NetworkClient {
-
-    private final static Logger logger = LoggerFactory.getLogger(NetworkClient.class);
-
-    private String url;
-
-    public NetworkClient() {
-        logger.info("NetworkClient Constructor");
-    }
-
-    public void init() {
-        logger.info("NetworkClient Init");
-        connect();
-        call("초기화 연결 메시지");
-    }
-
-    public void close() {
-        logger.info("NetworkClient close");
-        disconnect();
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public void connect() {
-        logger.info("connect: " + url);
-    }
-
-    public void call(String message) {
-        logger.info("call: {} / message: {}", url, message);
-    }
-
-    public void disconnect() {
-        logger.info("close: {}", url);
-    }
-}
-
-@Configuration
-class LifeCycleConfig {
-    @Bean(initMethod = "init", destroyMethod = "close")
-    public NetworkClient networkClient() {
-        NetworkClient networkClient = new NetworkClient();
-        networkClient.setUrl("https://ruby.com");
-        return networkClient;
-    }
-}
-```
